@@ -91,3 +91,17 @@ class StorageDemoAdapter(DemoAuthMixin, facility_adapter.FacilityAdapter):
                     access=m.access,
                 ))
         return result
+
+    async def get_access_endpoints(
+        self: "StorageDemoAdapter",
+        resource: status_models.Resource,
+        user: User,
+        protocol: storage_models.AccessProtocol | None,
+        endpoint_id: str | None,
+    ) -> list[storage_models.AccessEndpoint]:
+        endpoints = STATE.access_endpoints.get(resource.id, [])
+        if protocol:
+            endpoints = [e for e in endpoints if e.protocol == protocol]
+        if endpoint_id:
+            endpoints = [e for e in endpoints if e.id == endpoint_id]
+        return endpoints
