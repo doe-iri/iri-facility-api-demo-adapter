@@ -48,7 +48,7 @@ dev: deps
 	OPENTELEMETRY_ENABLED=true \
 	API_URL_ROOT='http://localhost:8000' uvicorn app.main:APP --reload --port 8000
 
-test: deps ## Run unit tests (test_filesystem.py is a live script, excluded via pyproject)
+test: deps ## Run unit tests
 	$(BIN)/python -m pytest test/ -v
 
 REDIS_PORT      ?= 6379

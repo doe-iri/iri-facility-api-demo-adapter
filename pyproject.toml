@@ -14,5 +14,4 @@ exclude = [".venv", "__pycache__", "build", "dist"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
-# test_filesystem.py is a live integration script (prompts via input(), hits a running server)
 addopts = "--ignore=test/test_filesystem.py"
