@@ -7,7 +7,7 @@ real adapters at construction time (the library no longer ships a demo fallback)
 import os
 
 _COMBINED = "demo_adapter.combined.DemoAdapter"
-for _domain in ("facility", "status", "account", "compute", "filesystem", "storage", "task"):
+for _domain in ("facility", "status", "account", "compute", "filesystem", "task"):
     os.environ.setdefault(f"IRI_API_ADAPTER_{_domain}", _COMBINED)
 
 os.environ.setdefault("IRI_IDEMPOTENCY_STORE", "demo_adapter.compute.idempotency.InMemoryIdempotencyStore")

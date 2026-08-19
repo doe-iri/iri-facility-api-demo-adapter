@@ -1,8 +1,10 @@
 # iri-facility-api-demo-adapter
 
+> **This is the `v1` branch** — pinned to `iri-facility-api-python@v1.2.0` and its v1 `AuthenticatedAdapter` contract (adds `get_current_user_globus`, wider `get_user` signature). For v2 (the default), see the `main` branch. See `examples/` on `main` for docker-compose examples covering v1-only, v2-only, and mixed v1+v2 setups.
+
 A per-domain, copy-from-here starter kit for facilities onboarding to the [IRI Facility API](https://iri.science/).
 
-[`iri-facility-api-python`](https://github.com/doe-iri/iri-facility-api-python) ships a reference FastAPI implementation of the API plus a single `DemoAdapter` class that fakes all 7 domains (facility, status, account, compute, filesystem, storage, task) at once. That's great for a five-minute demo, but not a great starting point for a real facility: there's nothing to fork per domain, and the domains aren't independently swappable.
+[`iri-facility-api-python`](https://github.com/doe-iri/iri-facility-api-python) ships a reference FastAPI implementation of the API plus a single `DemoAdapter` class that fakes all its domains at once. That's great for a five-minute demo, but not a great starting point for a real facility: there's nothing to fork per domain, and the domains aren't independently swappable.
 
 This repo is the same demo behavior, split into one module per domain, so you can:
 
@@ -18,17 +20,17 @@ docker build -t iri-demo-adapter .
 docker run -p 8000:8000 iri-demo-adapter
 ```
 
-Visit [http://127.0.0.1:8000/api/v2](http://127.0.0.1:8000/api/v2) for the docs, or call it directly:
+Visit [http://127.0.0.1:8000/api/v1](http://127.0.0.1:8000/api/v1) for the docs, or call it directly:
 
 ```bash
-curl -H "Authorization: Bearer 12345" http://127.0.0.1:8000/api/v2/facility
+curl -H "Authorization: Bearer 12345" http://127.0.0.1:8000/api/v1/facility
 ```
 
 (`12345` is the demo adapter's hardcoded API key, resolving to the fake user `gtorok` — see [demo_adapter/common.py](demo_adapter/common.py).)
 
-## The 7 domains
+## The 6 domains
 
-Each domain is independently wired via its own `IRI_API_ADAPTER_<domain>` environment variable (see the [upstream README](https://github.com/doe-iri/iri-facility-api-python#environment-variables) for how that mechanism works). The Dockerfile wires all 7 to this repo's demo classes by default:
+Each domain is independently wired via its own `IRI_API_ADAPTER_<domain>` environment variable (see the [upstream README](https://github.com/doe-iri/iri-facility-api-python#environment-variables) for how that mechanism works). The Dockerfile wires all 6 to this repo's demo classes by default. Note there's no `storage` row here -- iri-api-python v1.2.0 doesn't have that domain (it's v2-only; see the `main` branch):
 
 | Domain | Env var | Upstream ABC | Demo class |
 |---|---|---|---|
@@ -37,16 +39,15 @@ Each domain is independently wired via its own `IRI_API_ADAPTER_<domain>` enviro
 | account | `IRI_API_ADAPTER_account` | `app.routers.account.facility_adapter.FacilityAdapter` | [`demo_adapter.account.adapter.AccountDemoAdapter`](demo_adapter/account/adapter.py) |
 | compute | `IRI_API_ADAPTER_compute` | `app.routers.compute.facility_adapter.FacilityAdapter` | [`demo_adapter.compute.adapter.ComputeDemoAdapter`](demo_adapter/compute/adapter.py) |
 | filesystem | `IRI_API_ADAPTER_filesystem` | `app.routers.filesystem.facility_adapter.FacilityAdapter` | [`demo_adapter.filesystem.adapter.FilesystemDemoAdapter`](demo_adapter/filesystem/adapter.py) |
-| storage | `IRI_API_ADAPTER_storage` | `app.routers.storage.facility_adapter.FacilityAdapter` | [`demo_adapter.storage.adapter.StorageDemoAdapter`](demo_adapter/storage/adapter.py) |
 | task | `IRI_API_ADAPTER_task` | `app.routers.task.facility_adapter.FacilityAdapter` | [`demo_adapter.task.adapter.TaskDemoAdapter`](demo_adapter/task/adapter.py) |
 
-A [`demo_adapter.combined.DemoAdapter`](demo_adapter/combined.py) class is also provided, combining all 7 into one -- equivalent to the original monolith, useful if you just want the full demo under one class name.
+A [`demo_adapter.combined.DemoAdapter`](demo_adapter/combined.py) class is also provided, combining all 6 into one -- equivalent to the original monolith, useful if you just want the full demo under one class name.
 
 ### Shared demo data and auth
 
-All 7 classes read from one shared, read-only `STATE` object ([demo_adapter/state.py](demo_adapter/state.py)) so the fake world stays consistent across domains (e.g. `status`'s resources reference `facility`'s site ids, `storage`'s locations are keyed by `status`'s resource ids). They also all mix in [`DemoAuthMixin`](demo_adapter/common.py) for the `get_current_user`/`get_user` methods every domain's ABC requires -- every demo class resolves auth to the same fake user, `gtorok`.
+All 6 classes read from one shared, read-only `STATE` object ([demo_adapter/state.py](demo_adapter/state.py)) so the fake world stays consistent across domains (e.g. `status`'s resources reference `facility`'s site ids). They also all mix in [`DemoAuthMixin`](demo_adapter/common.py) for the `get_current_user`/`get_current_user_globus`/`get_user` methods every domain's v1 ABC requires -- every demo class resolves auth to the same fake user, `gtorok`.
 
-If you write your own adapter and mix in `DemoAuthMixin` alongside an upstream ABC that extends `AuthenticatedAdapter` (account, compute, filesystem, storage, task all do; facility and status don't), **list the mixin first**: `class MyAdapter(DemoAuthMixin, facility_adapter.FacilityAdapter)`, not the other way around. Python resolves methods left-to-right through the MRO, and `AuthenticatedAdapter` declares those same two methods as abstract -- if it comes first, Python finds the abstract version before it finds your mixin's concrete one, and the class becomes impossible to instantiate.
+If you write your own adapter and mix in `DemoAuthMixin` alongside an upstream ABC that extends `AuthenticatedAdapter` (account, compute, filesystem, task all do; facility and status don't), **list the mixin first**: `class MyAdapter(DemoAuthMixin, facility_adapter.FacilityAdapter)`, not the other way around. Python resolves methods left-to-right through the MRO, and `AuthenticatedAdapter` declares those same two methods as abstract -- if it comes first, Python finds the abstract version before it finds your mixin's concrete one, and the class becomes impossible to instantiate.
 
 ## Overriding one domain
 
@@ -62,7 +63,7 @@ COPY ./myfacility /app/myfacility/
 ENV IRI_API_ADAPTER_compute="myfacility.compute.adapter.ComputeAdapter"
 ```
 
-The other 6 `IRI_API_ADAPTER_*` env vars stay pointed at `demo_adapter.*`, so `facility`, `status`, `account`, `filesystem`, `storage`, and `task` keep working off demo data while only `compute` reflects real behavior. Repeat per domain as you build out real implementations.
+The other 5 `IRI_API_ADAPTER_*` env vars stay pointed at `demo_adapter.*`, so `facility`, `status`, `account`, `filesystem`, and `task` keep working off demo data while only `compute` reflects real behavior. Repeat per domain as you build out real implementations.
 
 ## Local development
 
@@ -70,7 +71,7 @@ The other 6 `IRI_API_ADAPTER_*` env vars stay pointed at `demo_adapter.*`, so `f
 make
 ```
 
-This creates a venv, installs the package (which pulls in `iri-api-python` per its git dependency), and runs `uvicorn app.main:APP --reload` with all 7 `IRI_API_ADAPTER_*` vars pointed at the demo classes -- same as the Dockerfile, but with reload-on-change. Logs go to stdout and `runtime-logs.log` (override with `IRI_LOG_FILE`/`LOG_FILE`). Source a `local.env` file for any local overrides; it's picked up automatically if present.
+This creates a venv, installs the package (which pulls in `iri-api-python` per its git dependency), and runs `uvicorn app.main:APP --reload` with all 6 `IRI_API_ADAPTER_*` vars pointed at the demo classes -- same as the Dockerfile, but with reload-on-change. Logs go to stdout and `runtime-logs.log` (override with `IRI_LOG_FILE`/`LOG_FILE`). Source a `local.env` file for any local overrides; it's picked up automatically if present.
 
 Equivalent by hand, if you don't have `make`:
 

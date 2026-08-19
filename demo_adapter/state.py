@@ -2,11 +2,15 @@
 
 Splitting the monolithic demo adapter into one class per domain still leaves
 several domains needing to agree on the same fake world: status's resources
-reference facility's site ids, storage's locations are keyed by status's
-resource ids, and storage's project-membership check reads account's
-projects. Seeding that world once here -- instead of independently in each
-domain's adapter -- keeps the per-domain adapters independently swappable
-while still presenting one consistent demo.
+reference facility's site ids, and account's project-membership is read by
+other domains. Seeding that world once here -- instead of independently in
+each domain's adapter -- keeps the per-domain adapters independently
+swappable while still presenting one consistent demo.
+
+v1 note: iri-api-python v1.2.0 has no `storage` domain (it's v2-only, see
+the main branch), so this file carries no storage-domain state (locations,
+access endpoints) here -- only the status-domain "storage_system"-type
+Resource entries (hpss, cfs), which v1 does have.
 """
 import datetime
 import random
@@ -14,7 +18,6 @@ import random
 from app.routers.account import models as account_models
 from app.routers.facility import models as facility_models
 from app.routers.status import models as status_models
-from app.routers.storage import models as storage_models
 from app.types.models import Capability
 from app.types.scalars import AllocationUnit
 
@@ -34,8 +37,6 @@ class DemoState:
         self.project_allocations: list[account_models.ProjectAllocation] = []
         self.user_allocations: list[account_models.UserAllocation] = []
         self.facility: facility_models.Facility | None = None
-        self.locations: dict[str, list[storage_models.StorageInstance]] = {}
-        self.access_endpoints: dict[str, list[storage_models.AccessEndpoint]] = {}
         self.sites: list[facility_models.Site] = []
         self._init_state()
 
@@ -118,7 +119,7 @@ class DemoState:
             capability_ids=[self.capabilities["hpss"].id],
             current_status=status_models.Status.up,
             last_modified=day_ago,
-            resource_type=status_models.ResourceType.storage_system,
+            resource_type=status_models.ResourceType.storage,
             supported_endpoints=[status_models.Endpoint.filesystem],
             attributes={
                 "schema_version": "1.0.0",
@@ -138,7 +139,7 @@ class DemoState:
             capability_ids=[self.capabilities["gpfs"].id],
             current_status=status_models.Status.up,
             last_modified=day_ago,
-            resource_type=status_models.ResourceType.storage_system,
+            resource_type=status_models.ResourceType.storage,
             supported_endpoints=[status_models.Endpoint.filesystem],
             attributes={
                 "schema_version": "1.0.0",
@@ -185,200 +186,6 @@ class DemoState:
         )
 
         self.resources = [pm, hpss, cfs, login, iris, sfapi]
-
-        _rw = storage_models.AccessPermissions(read=True, write=True, execute=True)
-        _ro = storage_models.AccessPermissions(read=True, write=False, execute=True)
-
-        # Paths use {user}, {first} (first letter of username), and {project} as placeholders.
-        # Project-scoped entries (containing {project}) are expanded per-project at query time.
-        # Each resource_id carries the access semantics for its own context -- a compute
-        # resource shows in-job permissions, a login/DTN/Globus resource shows what that
-        # endpoint can do. There is no separate access_outside_of_job field.
-
-        # Perlmutter compute nodes: in-job semantics. Home is read-only inside a job;
-        # archive (HPSS) is not accessible from compute, so it isn't mounted here at all.
-        self.locations[pm.id] = [
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.home,
-                path="/global/homes/{first}/{user}",
-                access=_ro,
-                filesystem="gpfs-homes",
-                performance_tier="medium",
-                purge_policy_days=None,
-                shared=False,
-            ),
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.scratch,
-                path="/pscratch/sd/{first}/{user}",
-                access=_rw,
-                filesystem="lustre-scratch",
-                performance_tier="high",
-                purge_policy_days=30,
-                shared=False,
-            ),
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.project,
-                path="/global/project/projectdirs/{project}/{user}",
-                access=_rw,
-                filesystem="gpfs-project",
-                performance_tier="medium",
-                purge_policy_days=None,
-                shared=True,
-            ),
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.campaign,
-                path="/global/cfs/cdirs/{project}/campaign/{user}",
-                access=_rw,
-                filesystem="gpfs-cfs",
-                performance_tier="medium",
-                purge_policy_days=120,
-                shared=True,
-            ),
-        ]
-
-        # HPSS tape system: archive only; user accesses it through this resource_id
-        # (typically via login nodes or htar). Archive is rw from this resource.
-        self.locations[hpss.id] = [
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.archive,
-                path="/home/{first}/{user}",
-                access=_rw,
-                filesystem="hpss",
-                performance_tier="tape",
-                purge_policy_days=None,
-                shared=False,
-            ),
-        ]
-
-        # CFS / GPFS resource (queried via login nodes / DTN-style endpoint): all tiers rw,
-        # shared is read-only because it's the project-shared landing area.
-        self.locations[cfs.id] = [
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.home,
-                path="/global/homes/{first}/{user}",
-                access=_rw,
-                filesystem="gpfs-homes",
-                performance_tier="medium",
-                purge_policy_days=None,
-                shared=False,
-            ),
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.scratch,
-                path="/pscratch/sd/{first}/{user}",
-                access=_rw,
-                filesystem="lustre-scratch",
-                performance_tier="high",
-                purge_policy_days=30,
-                shared=False,
-            ),
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.project,
-                path="/global/project/projectdirs/{project}/{user}",
-                access=_rw,
-                filesystem="gpfs-project",
-                performance_tier="medium",
-                purge_policy_days=None,
-                shared=True,
-            ),
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.campaign,
-                path="/global/cfs/cdirs/{project}/campaign/{user}",
-                access=_rw,
-                filesystem="gpfs-cfs",
-                performance_tier="medium",
-                purge_policy_days=120,
-                shared=True,
-            ),
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.shared,
-                path="/global/cfs/cdirs/{project}/shared",
-                access=_ro,
-                filesystem="gpfs-cfs",
-                performance_tier="medium",
-                purge_policy_days=None,
-                shared=True,
-            ),
-            storage_models.StorageInstance(
-                logical_name=storage_models.LogicalName.temporary,
-                path="/tmp/{user}",
-                access=_rw,
-                filesystem="tmpfs",
-                performance_tier="high",
-                purge_policy_days=7,
-                shared=False,
-            ),
-        ]
-
-        # Login nodes: same filesystem layout as CFS -- outside-of-job semantics for everything.
-        self.locations[login.id] = self.locations[cfs.id]
-
-        globus_cfs_id = demo_uuid("endpoint", "globus-cfs")
-        globus_hpss_id = demo_uuid("endpoint", "globus-hpss")
-
-        self.access_endpoints[cfs.id] = [
-            storage_models.AccessEndpoint(
-                id="globus-cfs-demo",
-                resource_id=cfs.id,
-                protocol=storage_models.AccessProtocol.globus,
-                display_name="Demo CFS Globus",
-                endpoint_id=globus_cfs_id,
-                uri=f"globus://{globus_cfs_id}/",
-                root_path="/",
-                auth_type="globus",
-                capabilities=[
-                    storage_models.AccessCapability.list,
-                    storage_models.AccessCapability.read,
-                    storage_models.AccessCapability.write,
-                    storage_models.AccessCapability.transfer,
-                ],
-            ),
-            storage_models.AccessEndpoint(
-                id="xrootd-cfs-demo",
-                resource_id=cfs.id,
-                protocol=storage_models.AccessProtocol.xrootd,
-                display_name="Demo CFS XRootD",
-                endpoint="root://cfs.demo.example/",
-                auth_type="x509",
-                capabilities=[
-                    storage_models.AccessCapability.read,
-                    storage_models.AccessCapability.streaming,
-                ],
-            ),
-            storage_models.AccessEndpoint(
-                id="s3-cfs-demo",
-                resource_id=cfs.id,
-                protocol=storage_models.AccessProtocol.s3,
-                display_name="Demo CFS S3",
-                bucket="demo-cfs",
-                region="us-east-1",
-                endpoint_url="https://s3.demo.example",
-                auth_type="aws_s3",
-                capabilities=[
-                    storage_models.AccessCapability.list,
-                    storage_models.AccessCapability.read,
-                    storage_models.AccessCapability.write,
-                ],
-            ),
-        ]
-
-        self.access_endpoints[hpss.id] = [
-            storage_models.AccessEndpoint(
-                id="globus-hpss-demo",
-                resource_id=hpss.id,
-                protocol=storage_models.AccessProtocol.globus,
-                display_name="Demo HPSS Globus",
-                endpoint_id=globus_hpss_id,
-                uri=f"globus://{globus_hpss_id}/",
-                root_path="/home",
-                auth_type="globus",
-                capabilities=[
-                    storage_models.AccessCapability.list,
-                    storage_models.AccessCapability.read,
-                    storage_models.AccessCapability.write,
-                    storage_models.AccessCapability.transfer,
-                ],
-            ),
-        ]
 
         # Populate site resource_ids based on which resources are at each site
         site1.resource_ids = [r.id for r in self.resources if r.site_id == site1.id]

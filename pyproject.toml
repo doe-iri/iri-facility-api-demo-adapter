@@ -1,10 +1,10 @@
 [project]
 name = "iri-facility-api-demo-adapter"
 version = "0.1.0"
-description = "Per-domain reference implementation of the IRI facility adapters, split out as a starter kit for facilities onboarding to the IRI Facility API."
+description = "Per-domain reference implementation of the IRI facility adapters (v1 branch), split out as a starter kit for facilities onboarding to the IRI Facility API."
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "iri-api-python @ git+https://github.com/doe-iri/iri-facility-api-python.git",
+    "iri-api-python @ git+https://github.com/doe-iri/iri-facility-api-python.git@v1.2.0",
     "redis>=7.2.0,<8.0.0",
 ]
 
@@ -14,4 +14,6 @@ exclude = [".venv", "__pycache__", "build", "dist"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
-addopts = "--ignore=test/test_filesystem.py"
+# test_storage.py exercises the storage domain, which iri-api-python v1.2.0
+# doesn't have -- see demo_adapter/state.py's v1 note.
+addopts = "--ignore=test/test_filesystem.py --ignore=test/test_storage.py"

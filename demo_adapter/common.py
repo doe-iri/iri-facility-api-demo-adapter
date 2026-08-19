@@ -40,6 +40,11 @@ class DemoAuthMixin:
     app.routers.iri_router.AuthenticatedAdapter), so each independently
     configured domain adapter must implement these methods itself.
     All seven demo adapters resolve to the same fake user via DEMO_USER.
+
+    This is the v1 AuthenticatedAdapter contract (iri-api-python v1.2.0):
+    it additionally requires get_current_user_globus, and get_user takes
+    token_info/globus_introspect. See demo_adapter.common on the main
+    branch for the v2 contract (no globus method, narrower get_user).
     """
 
     async def get_current_user(self: "DemoAuthMixin", api_key: str, client_ip: str | None) -> str:
@@ -47,7 +52,17 @@ class DemoAuthMixin:
             raise HTTPException(status_code=401, detail="Invalid API key")
         return DEMO_USER.id
 
-    async def get_user(self: "DemoAuthMixin", user_id: str, api_key: str, client_ip: str | None) -> User:
+    async def get_current_user_globus(self: "DemoAuthMixin", api_key: str, client_ip: str | None, globus_introspect: dict | None) -> str:
+        return DEMO_USER.id
+
+    async def get_user(
+        self: "DemoAuthMixin",
+        user_id: str,
+        api_key: str,
+        client_ip: str | None,
+        token_info: dict | None,
+        globus_introspect: dict | None,
+    ) -> User:
         if user_id != DEMO_USER.id:
             raise HTTPException(status_code=403, detail="User not found")
         return DEMO_USER
