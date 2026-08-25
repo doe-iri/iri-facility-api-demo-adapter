@@ -2,6 +2,8 @@ FROM python:3.13
 
 RUN pip install -U pip wheel setuptools && pip install uv
 
+RUN git config --global url."https://github.com/".insteadOf "git@github.com:"
+
 COPY . /app
 WORKDIR /app
 

@@ -105,8 +105,98 @@ class DemoState:
             ],
             current_status=status_models.Status.degraded,
             last_modified=day_ago,
-            resource_type=status_models.ResourceType.compute,
+            resource_type=status_models.ResourceType.compute_system,
             supported_endpoints=[status_models.Endpoint.compute],
+            attributes={
+                "schema_version": "1.0.0",
+                "system_capabilities": [
+                    "urn:doe-iri:compute:system-capability:batch-scheduling",
+                    "urn:doe-iri:compute:system-capability:interactive-access",
+                    "urn:doe-iri:compute:system-capability:container-execution",
+                    "urn:doe-iri:compute:system-capability:accelerator-support",
+                ],
+            },
+        )
+
+        # Demonstrates the Storage System -> Filesystem -> Mount chain
+        # and the provides-filesystem / has-mount / mounted-on relations
+        scratch_system = status_models.Resource(
+            id=demo_uuid("resource", "perlmutter_scratch_system"),
+            site_id=site1.id,
+            group="perlmutter",
+            name="Perlmutter scratch storage system",
+            description="Lustre storage infrastructure backing the perlmutter scratch filesystem",
+            capability_ids=[],
+            current_status=status_models.Status.up,
+            last_modified=day_ago,
+            resource_type=status_models.ResourceType.storage_system,
+            related_resource_ids={"provides-filesystem": [demo_uuid("resource", "perlmutter_scratch_fs")]},
+            attributes={
+                "schema_version": "1.0.0",
+                "storage_technology": "urn:doe-iri:storage:system-technology:lustre",
+                "storage_architecture": ["urn:doe-iri:storage:system-architecture:distributed"],
+            },
+        )
+
+        scratch_fs = status_models.Resource(
+            id=demo_uuid("resource", "perlmutter_scratch_fs"),
+            site_id=site1.id,
+            group="perlmutter",
+            name="Perlmutter scratch filesystem",
+            description="High-performance temporary storage for active perlmutter workloads",
+            capability_ids=[],
+            current_status=status_models.Status.up,
+            last_modified=day_ago,
+            resource_type=status_models.ResourceType.storage_filesystem,
+            related_resource_ids={"has-mount": [demo_uuid("resource", "perlmutter_scratch_mount")]},
+            attributes={
+                "schema_version": "1.0.0",
+                "filesystem_scope": "urn:doe-iri:storage:filesystem-scope:network",
+                "filesystem_technology": "urn:doe-iri:storage:filesystem-technology:lustre",
+                "tier": "urn:doe-iri:storage:tier:scratch",
+            },
+        )
+
+        scratch_mount = status_models.Resource(
+            id=demo_uuid("resource", "perlmutter_scratch_mount"),
+            site_id=site1.id,
+            group="perlmutter",
+            name="Perlmutter scratch mount",
+            description="Exposure of the scratch filesystem on the perlmutter compute nodes",
+            capability_ids=[],
+            current_status=status_models.Status.up,
+            last_modified=day_ago,
+            resource_type=status_models.ResourceType.storage_mount,
+            related_resource_ids={"mounted-on": [pm.id]},
+            attributes={
+                "schema_version": "1.0.0",
+                "mount_path": "/pscratch/sd/{first}/{user}",
+                "access_mode": "urn:doe-iri:storage:mount-access-mode:read-write",
+            },
+        )
+
+        dtn = status_models.Resource(
+            id=demo_uuid("resource", "perlmutter_dtn"),
+            site_id=site1.id,
+            group="perlmutter",
+            name="Perlmutter DTN",
+            description="Globus data-transfer service hosted on the perlmutter compute nodes, with access to scratch",
+            capability_ids=[],
+            current_status=status_models.Status.up,
+            last_modified=day_ago,
+            resource_type=status_models.ResourceType.service_dtn,
+            related_resource_ids={
+                "hosted-on": [pm.id],
+                "accesses-mount": [demo_uuid("resource", "perlmutter_scratch_mount")],
+            },
+            attributes={
+                "schema_version": "1.0.0",
+                "dtn_technology": "urn:doe-iri:service:dtn-technology:globus",
+                "transfer_protocols": [
+                    "urn:doe-iri:service:transfer-protocol:https",
+                    "urn:doe-iri:service:transfer-protocol:gridftp",
+                ],
+            },
         )
 
         hpss = status_models.Resource(
@@ -184,7 +274,7 @@ class DemoState:
             resource_type=status_models.ResourceType.service,
         )
 
-        self.resources = [pm, hpss, cfs, login, iris, sfapi]
+        self.resources = [pm, scratch_system, scratch_fs, scratch_mount, dtn, hpss, cfs, login, iris, sfapi]
 
         _rw = storage_models.AccessPermissions(read=True, write=True, execute=True)
         _ro = storage_models.AccessPermissions(read=True, write=False, execute=True)
