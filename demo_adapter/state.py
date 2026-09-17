@@ -115,6 +115,102 @@ class DemoState:
                     "urn:doe-iri:compute:system-capability:container-execution",
                     "urn:doe-iri:compute:system-capability:accelerator-support",
                 ],
+                "container_runtimes": [
+                    {
+                        "runtime": "urn:doe-iri:compute:container-runtime:podman-hpc",
+                        "default": True,
+                        "accepted_image_formats": [
+                            "urn:doe-iri:compute:container-image-format:oci-image",
+                            "urn:doe-iri:compute:container-image-format:docker-v2-image",
+                        ],
+                        "native_execution_format": "urn:doe-iri:compute:container-execution-format:runtime-managed-image",
+                        "registry_pull": "urn:doe-iri:compute:container-acquisition:pre-stage-required",
+                        "pull_actor": "user",
+                        "registry_policy_mode": "any",
+                        "private_registry_auth": [
+                            "urn:doe-iri:compute:container-registry-auth:user-login",
+                        ],
+                        "rootless_required": True,
+                        "privileged_allowed": False,
+                        "uid_mode": "urn:doe-iri:compute:container-uid-mode:userns",
+                        "gpu_integration": {
+                            "programming_interfaces": [
+                                "urn:doe-iri:compute:gpu-programming-interface:cuda",
+                            ],
+                            "injection_mechanism": "urn:doe-iri:compute:container-gpu-injection:module",
+                        },
+                        "mpi": {
+                            "models": [
+                                "urn:doe-iri:compute:container-mpi-model:hybrid",
+                                "urn:doe-iri:compute:container-mpi-model:container-native",
+                            ],
+                            "default_model": "urn:doe-iri:compute:container-mpi-model:hybrid",
+                            "host_transfer": "urn:doe-iri:compute:container-mpi-host-transfer:library-injection",
+                            "host_mpi": "HPE Cray MPICH 8",
+                            "abi": "urn:doe-iri:compute:container-mpi-abi:mpich",
+                            "required_container_mpi": "A standard MPICH built from source with shared libraries (not the distro package)",
+                            "gpu_aware": "supported",
+                            "process_managers": ["pmi2", "pmix"],
+                            "activation": "urn:doe-iri:compute:container-mpi-activation:flag",
+                            "notes": "podman-hpc --mpi inserts the optimized Cray MPICH over the container's MPICH at run time.",
+                        },
+                        "cpu_architectures": [
+                            "urn:doe-iri:compute:cpu-architecture:x86-64",
+                        ],
+                        "build_support": "urn:doe-iri:compute:container-build:login-node",
+                        "image_scanning": "unknown",
+                        "signature_verification": "unknown",
+                        "notes": "Images are squashed into a single-layer runtime store entry. Manual pre-pull on a login node is recommended.",
+                    },
+                    {
+                        "runtime": "urn:doe-iri:compute:container-runtime:shifter",
+                        "default": False,
+                        "accepted_image_formats": [
+                            "urn:doe-iri:compute:container-image-format:oci-image",
+                            "urn:doe-iri:compute:container-image-format:docker-v2-image",
+                        ],
+                        "native_execution_format": "urn:doe-iri:compute:container-execution-format:runtime-managed-image",
+                        "registry_pull": "urn:doe-iri:compute:container-acquisition:pre-stage-required",
+                        "pull_actor": "facility",
+                        "registry_policy_mode": "any",
+                        "rootless_required": False,
+                        "privileged_allowed": False,
+                        "uid_mode": "urn:doe-iri:compute:container-uid-mode:setuid-helper",
+                        "gpu_integration": {
+                            "programming_interfaces": [
+                                "urn:doe-iri:compute:gpu-programming-interface:cuda",
+                            ],
+                            "injection_mechanism": "urn:doe-iri:compute:container-gpu-injection:automatic",
+                        },
+                        "cpu_architectures": [
+                            "urn:doe-iri:compute:cpu-architecture:x86-64",
+                        ],
+                        "build_support": "urn:doe-iri:compute:container-build:none",
+                        "notes": "The image manager imports and flattens registry images before jobs reference them.",
+                    },
+                ],
+            },
+        )
+
+        no_container_cluster = status_models.Resource(
+            id=demo_uuid("resource", "cpu_only_cluster"),
+            site_id=site2.id,
+            group="cpu-only",
+            name="CPU-only cluster",
+            description="a compute system that does not support containerized execution",
+            capability_ids=[
+                self.capabilities["cpu"].id,
+            ],
+            current_status=status_models.Status.up,
+            last_modified=day_ago,
+            resource_type=status_models.ResourceType.compute_system,
+            supported_endpoints=[status_models.Endpoint.compute],
+            attributes={
+                "schema_version": "1.0.0",
+                "system_capabilities": [
+                    "urn:doe-iri:compute:system-capability:batch-scheduling",
+                ],
+                "container_runtimes": [],
             },
         )
 
@@ -274,7 +370,7 @@ class DemoState:
             resource_type=status_models.ResourceType.service,
         )
 
-        self.resources = [pm, scratch_system, scratch_fs, scratch_mount, dtn, hpss, cfs, login, iris, sfapi]
+        self.resources = [pm, scratch_system, scratch_fs, scratch_mount, dtn, hpss, cfs, login, iris, sfapi, no_container_cluster]
 
         _rw = storage_models.AccessPermissions(read=True, write=True, execute=True)
         _ro = storage_models.AccessPermissions(read=True, write=False, execute=True)
