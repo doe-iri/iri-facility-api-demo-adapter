@@ -41,6 +41,7 @@ dev: deps
 	IRI_API_ADAPTER_filesystem=demo_adapter.filesystem.adapter.FilesystemDemoAdapter \
 	IRI_API_ADAPTER_storage=demo_adapter.storage.adapter.StorageDemoAdapter \
 	IRI_API_ADAPTER_task=demo_adapter.task.adapter.TaskDemoAdapter \
+	IRI_API_ADAPTER_skills=demo_adapter.skills.adapter.SkillsDemoAdapter \
 	IRI_LOG_FILE="$${IRI_LOG_FILE:-$${LOG_FILE:-$(IRI_LOG_FILE)}}" \
 	IRI_LOG_ROTATION_DAYS="$${IRI_LOG_ROTATION_DAYS:-$${LOG_ROTATION_DAYS:-$(IRI_LOG_ROTATION_DAYS)}}" \
 	IRI_IDEMPOTENCY_STORE=demo_adapter.compute.idempotency.InMemoryIdempotencyStore \

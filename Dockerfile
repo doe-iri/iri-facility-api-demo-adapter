@@ -19,6 +19,7 @@ ENV IRI_API_ADAPTER_compute="demo_adapter.compute.adapter.ComputeDemoAdapter"
 ENV IRI_API_ADAPTER_filesystem="demo_adapter.filesystem.adapter.FilesystemDemoAdapter"
 ENV IRI_API_ADAPTER_storage="demo_adapter.storage.adapter.StorageDemoAdapter"
 ENV IRI_API_ADAPTER_task="demo_adapter.task.adapter.TaskDemoAdapter"
+ENV IRI_API_ADAPTER_skills="demo_adapter.skills.adapter.SkillsDemoAdapter"
 # The library ships no built-in idempotency store; wire the demo in-memory one so
 # Idempotency-Key requests work out of the box (single-instance; not for production).
 ENV IRI_IDEMPOTENCY_STORE="demo_adapter.compute.idempotency.InMemoryIdempotencyStore"
