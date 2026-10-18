@@ -8,6 +8,10 @@ dependencies = [
     "redis>=7.2.0,<8.0.0",
 ]
 
+[tool.setuptools.package-data]
+# Bundled Agent Skills (SKILL.md, scripts/) are data files served by GET /skills.
+"demo_adapter.skills" = ["bundled/**/*"]
+
 [tool.ruff]
 line-length = 200
 exclude = [".venv", "__pycache__", "build", "dist"]

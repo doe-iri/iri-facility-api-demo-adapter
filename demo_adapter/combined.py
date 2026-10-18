@@ -1,4 +1,4 @@
-"""Convenience class combining all 7 per-domain demo adapters into one.
+"""Convenience class combining all 8 per-domain demo adapters into one.
 
 Equivalent to the original monolithic DemoAdapter in iri-facility-api-python.
 Useful for wiring every IRI_API_ADAPTER_<domain> env var to a single class
@@ -11,6 +11,7 @@ from .common import DemoAuthMixin
 from .compute.adapter import ComputeDemoAdapter
 from .facility.adapter import FacilityDemoAdapter
 from .filesystem.adapter import FilesystemDemoAdapter
+from .skills.adapter import SkillsDemoAdapter
 from .status.adapter import StatusDemoAdapter
 from .storage.adapter import StorageDemoAdapter
 from .task.adapter import TaskDemoAdapter
@@ -24,6 +25,7 @@ class DemoAdapter(
     FilesystemDemoAdapter,
     StorageDemoAdapter,
     TaskDemoAdapter,
+    SkillsDemoAdapter,
     DemoAuthMixin,
 ):
     """Implements every domain's FacilityAdapter at once, like the original demo_adapter.DemoAdapter."""
