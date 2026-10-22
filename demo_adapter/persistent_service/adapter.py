@@ -53,9 +53,6 @@ clusters = {
     ],
 }
 cluster_servers = {cluster.id:server_id for server_id,cluster_list in clusters.items() for cluster in cluster_list}
-print("------------------")
-print(cluster_servers)
-print("------------------")
 server_urls = {
     spin.id: "https://rancher2.spin.nersc.gov",
     spin_r.id: "https://rancher2-r.spin.nersc.gov"
