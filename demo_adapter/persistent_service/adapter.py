@@ -4,7 +4,10 @@ import datetime
 import secrets
 import yaml
 
+from fastapi import HTTPException
+
 from ..common import DemoAuthMixin
+from ..state import STATE
 
 spin = models.Server(
     id="spin",
@@ -64,8 +67,11 @@ class PersistentServiceDemoAdapter(DemoAuthMixin, facility_adapter.FacilityAdapt
         async def get_servers(
             self: "PersistentServiceDemoAdapter",
             user: User,
+            resource_id: str,
         ) -> models.ServerList:
-            if user.id == "gtorok":
+            if resource_id != STATE.spin.id:
+                return models.ServerList(items=[])
+            elif user.id == "gtorok":
                 return models.ServerList(items=[spin, spin_r])
             else:
                 return models.ServerList(items=[spin])
@@ -74,17 +80,23 @@ class PersistentServiceDemoAdapter(DemoAuthMixin, facility_adapter.FacilityAdapt
         async def get_clusters(
             self: "PersistentServiceDemoAdapter",
             user: User,
+            resource_id: str,
             server_id: str,
         ) -> models.ClusterList:
+            if resource_id != STATE.spin.id:
+                return models.ClusterList(items=[])
             return models.ClusterList(items=[cluster for cluster in clusters[server_id]])
 
 
         async def get_projects(
             self: "PersistentServiceDemoAdapter",
             user: User,
+            resource_id: str,
             server_id: str,
             cluster_id: str,
         ) -> models.ProjectList:
+            if resource_id != STATE.spin.id:
+                return models.ProjectList(items=[])
             return models.ProjectList(items=[
                 # todo: this should be per server, per cluster and per user
                 # for now just a static list
@@ -104,10 +116,13 @@ class PersistentServiceDemoAdapter(DemoAuthMixin, facility_adapter.FacilityAdapt
         async def create_namespace(
             self: "PersistentServiceDemoAdapter",
             user: User,
+            resource_id: str,
             server_id: str,
             cluster_id: str,
             namespace_request: models.NamespaceCreateRequest
         ) -> models.Namespace:
+            if resource_id != STATE.spin.id:
+                raise HTTPException(status_code=400, detail=f"Can't create namespace in resource={resource_id}")
             return models.Namespace(
                 id = namespace_request.id,
                 cluster_id = cluster_id,
@@ -119,9 +134,12 @@ class PersistentServiceDemoAdapter(DemoAuthMixin, facility_adapter.FacilityAdapt
         async def create_kubeconfig(
             self: "PersistentServiceDemoAdapter",
             user: User,
+            resource_id: str,
             server_id: str,
             kubeconfig_request: models.KubeconfigRequest
         ) -> str:
+            if resource_id != STATE.spin.id:
+                raise HTTPException(status_code=400, detail=f"Can't create kubeconfig in resource={resource_id}")
             kubeconfig = {
                 "apiVersion": "v1",
                 "kind": "Config",

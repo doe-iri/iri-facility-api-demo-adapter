@@ -183,8 +183,19 @@ class DemoState:
             last_modified=day_ago,
             resource_type=status_models.ResourceType.service,
         )
+        self.spin = status_models.Resource(
+            id=demo_uuid("resource", "spin"),
+            site_id=site2.id,
+            group="services",
+            name="Spin",
+            description="Spin k8s service",
+            capability_ids=[],
+            current_status=status_models.Status.up,
+            last_modified=day_ago,
+            resource_type=status_models.ResourceType.service,
+        )
 
-        self.resources = [pm, hpss, cfs, login, iris, sfapi]
+        self.resources = [pm, hpss, cfs, login, iris, sfapi, self.spin]
 
         _rw = storage_models.AccessPermissions(read=True, write=True, execute=True)
         _ro = storage_models.AccessPermissions(read=True, write=False, execute=True)
